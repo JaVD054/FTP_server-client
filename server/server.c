@@ -62,7 +62,7 @@ int main() {
             printf("Received command: %s\n", buffer);
             if (strncmp(buffer, "EXIT", 4) == 0) {
                 printf("Client disconnected.\n");
-                break;
+                return 0;
             }
 
             char command[5], filename[BUFFER_SIZE];
