@@ -49,9 +49,9 @@ int main() {
         buffer[strcspn(buffer, "\n")] = 0;
 
         if (strcmp(buffer, USERNAME " " PASSWORD) == 0) {
-            sendto(sockfd, "AUTH_SUCCESS", strlen("AUTH_SUCCESS"), 0, (struct sockaddr *)&client_addr, addr_len);
+            sendto(sockfd, "AUTH_SUCCESS\0", strlen("AUTH_SUCCESS")+1, 0, (struct sockaddr *)&client_addr, addr_len);
         } else {
-            sendto(sockfd, "AUTH_FAILED", strlen("AUTH_FAILED"), 0, (struct sockaddr *)&client_addr, addr_len);
+            sendto(sockfd, "AUTH_FAILED\0", strlen("AUTH_FAILED")+1, 0, (struct sockaddr *)&client_addr, addr_len);
             continue;
         }
 
@@ -59,7 +59,7 @@ int main() {
             // Receive command (GET or PUT)
             memset(buffer, 0, sizeof(buffer));
             recvfrom(sockfd, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&client_addr, &addr_len);
-            
+            printf("Received command: %s\n", buffer);
             if (strncmp(buffer, "EXIT", 4) == 0) {
                 printf("Client disconnected.\n");
                 break;
@@ -82,29 +82,37 @@ int main() {
 }
 
 void handle_get(SOCKET sockfd, struct sockaddr_in client_addr, int addr_len, char *filename) {
+    printf("Handling get request - filename: %s\n", filename);
     FILE *file = fopen(filename, "rb");
     if (!file) {
-        sendto(sockfd, "FILE_NOT_FOUND", strlen("FILE_NOT_FOUND"), 0, (struct sockaddr *)&client_addr, addr_len);
+        sendto(sockfd, "FILE_NOT_FOUND\0", strlen("FILE_NOT_FOUND\0")+1, 0, (struct sockaddr *)&client_addr, addr_len);
         return;
     }
 
-    struct stat file_stat;
-    stat(filename, &file_stat);
-    char file_size_str[20];
-    sprintf(file_size_str, "%ld", file_stat.st_size);
+    // struct stat file_stat;
+    // stat(filename, &file_stat);
+    // char file_size_str[20];
+    // sprintf(file_size_str, "%ld", file_stat.st_size);
 
-    sendto(sockfd, file_size_str, strlen(file_size_str), 0, (struct sockaddr *)&client_addr, addr_len);
+    // sendto(sockfd, file_size_str, strlen(file_size_str), 0, (struct sockaddr *)&client_addr, addr_len);
 
     char buffer[BUFFER_SIZE];
-    int bytes_read;
-    while ((bytes_read = fread(buffer, 1, BUFFER_SIZE, file)) > 0) {
-        sendto(sockfd, buffer, bytes_read, 0, (struct sockaddr *)&client_addr, addr_len);
+
+    while (!feof(file)) {
+        int bytes_read = fread(buffer, 1, BUFFER_SIZE, file);
+        int bytes_sent = sendto(sockfd, buffer, bytes_read, 0, (struct sockaddr *)&client_addr, addr_len);
+        printf("Bytes sent: %d\n", bytes_sent);
     }
+    sendto(sockfd, "END\0", strlen("END\0")+1, 0, (struct sockaddr *)&client_addr, addr_len);
 
     fclose(file);
+    printf("File sent successfully.\n");
+    return;
 }
 
 void handle_put(SOCKET sockfd, struct sockaddr_in client_addr, int addr_len, char *filename) {
+    printf("Handling put request - filename: %s\n", filename);
+
     FILE *file = fopen(filename, "wb");
     if (!file) {
         return;
@@ -120,4 +128,5 @@ void handle_put(SOCKET sockfd, struct sockaddr_in client_addr, int addr_len, cha
     }
 
     fclose(file);
+    printf("File received successfully.\n");
 }

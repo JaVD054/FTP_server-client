@@ -5,7 +5,6 @@
 
 #pragma comment(lib, "ws2_32.lib") // Link Winsock library
 
-#define SERVER_IP "127.0.0.1"
 #define SERVER_PORT 12345
 #define BUFFER_SIZE 1024
 
@@ -28,12 +27,12 @@ int main() {
         return 1;
     }
 
-    // Define server address
+    // Set up server address
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(SERVER_PORT);
-    server_addr.sin_addr.s_addr = inet_addr(SERVER_IP);
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    // Send authentication request
+    // Send authentication
     char username[20], password[20];
     printf("Enter username: ");
     scanf("%s", username);
@@ -44,25 +43,29 @@ int main() {
     sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
 
     int addr_len = sizeof(server_addr);
+    memset(buffer, 0, sizeof(buffer));
+
     recvfrom(sockfd, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&server_addr, &addr_len);
 
     if (strcmp(buffer, "AUTH_SUCCESS") != 0) {
-        printf("Authentication failed\n");
+        printf("Authentication failed.\n");
+        closesocket(sockfd);
+        WSACleanup();
         return 1;
     }
 
     printf("Authenticated successfully!\n");
 
     while (1) {
-        printf("Enter command (GET <filename> / PUT <filename> / EXIT): ");
+        printf("\nEnter command (GET <filename> / PUT <filename> / EXIT): ");
         scanf(" %[^\n]", buffer);
 
+        sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
+        
         if (strncmp(buffer, "EXIT", 4) == 0) {
-            sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
             break;
         }
 
-        sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
 
         char command[5], filename[BUFFER_SIZE];
         sscanf(buffer, "%s %s", command, filename);
@@ -71,45 +74,62 @@ int main() {
             receive_file(sockfd, server_addr, filename);
         } else if (strcmp(command, "PUT") == 0) {
             send_file(sockfd, server_addr, filename);
+        } else {
+            printf("Invalid command.\n");
         }
     }
 
-    // Cleanup
     closesocket(sockfd);
     WSACleanup();
     return 0;
 }
 
-// Function to send a file to the server
 void send_file(SOCKET sockfd, struct sockaddr_in server_addr, char *filename) {
     FILE *file = fopen(filename, "rb");
     if (!file) {
-        printf("File not found\n");
+        printf("File not found: %s\n", filename);
         return;
     }
 
     char buffer[BUFFER_SIZE];
     int bytes_read;
-    while ((bytes_read = fread(buffer, 1, BUFFER_SIZE, file)) > 0) {
-        sendto(sockfd, buffer, bytes_read, 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    int addr_len = sizeof(server_addr);
+
+    while (!feof(file)) {
+        bytes_read = fread(buffer, 1, BUFFER_SIZE, file);
+        int bytes_sent = sendto(sockfd, buffer, bytes_read, 0, (struct sockaddr *)&server_addr, addr_len);
+        printf("Bytes sent: %d\n", bytes_sent);
     }
 
+    // Send termination message
+    sendto(sockfd, "END", strlen("END"), 0, (struct sockaddr *)&server_addr, addr_len);
+
     fclose(file);
-    printf("File sent successfully\n");
+    printf("File %s sent successfully.\n", filename);
 }
 
-// Function to receive a file from the server
 void receive_file(SOCKET sockfd, struct sockaddr_in server_addr, char *filename) {
     FILE *file = fopen(filename, "wb");
-    if (!file) return;
+    if (!file) {
+        printf("Error creating file: %s\n", filename);
+        return;
+    }
 
     char buffer[BUFFER_SIZE];
     int bytes_received;
-    while ((bytes_received = recvfrom(sockfd, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&server_addr, NULL)) > 0) {
+    int addr_len = sizeof(server_addr);
+
+    while (1) {
+        bytes_received = recvfrom(sockfd, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&server_addr, &addr_len);
+        // buffer[bytes_received] = '\0';
+
+        if (bytes_received < BUFFER_SIZE) {
+            break;
+        }
+
         fwrite(buffer, 1, bytes_received, file);
-        if (bytes_received < BUFFER_SIZE) break;
     }
 
     fclose(file);
-    printf("File received successfully\n");
+    printf("File %s received successfully.\n", filename);
 }
