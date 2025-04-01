@@ -8,8 +8,8 @@
 #define SERVER_PORT 12345
 #define BUFFER_SIZE 1024
 
-void send_file(SOCKET sockfd, struct sockaddr_in server_addr, char *filename);
-void receive_file(SOCKET sockfd, struct sockaddr_in server_addr, char *filename);
+void send_file(SOCKET sockfd, struct sockaddr_in server_addr, char *filename,char * msg);
+void receive_file(SOCKET sockfd, struct sockaddr_in server_addr, char *filename,char * msg);
 
 int main() {
     WSADATA wsa;
@@ -60,9 +60,9 @@ int main() {
         printf("\nEnter command (GET <filename> / PUT <filename> / EXIT): ");
         scanf(" %[^\n]", buffer);
 
-        sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
         
         if (strncmp(buffer, "EXIT", 4) == 0) {
+            sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
             break;
         }
 
@@ -71,9 +71,9 @@ int main() {
         sscanf(buffer, "%s %s", command, filename);
 
         if (strcmp(command, "GET") == 0) {
-            receive_file(sockfd, server_addr, filename);
+            receive_file(sockfd, server_addr, filename,buffer);
         } else if (strcmp(command, "PUT") == 0) {
-            send_file(sockfd, server_addr, filename);
+            send_file(sockfd, server_addr, filename,buffer);
         } else {
             printf("Invalid command.\n");
         }
@@ -84,12 +84,13 @@ int main() {
     return 0;
 }
 
-void send_file(SOCKET sockfd, struct sockaddr_in server_addr, char *filename) {
+void send_file(SOCKET sockfd, struct sockaddr_in server_addr, char *filename,char * msg) {
     FILE *file = fopen(filename, "rb");
     if (!file) {
         printf("File not found: %s\n", filename);
         return;
     }
+    sendto(sockfd, msg, strlen(msg), 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
 
     char buffer[BUFFER_SIZE];
     int bytes_read;
@@ -108,20 +109,29 @@ void send_file(SOCKET sockfd, struct sockaddr_in server_addr, char *filename) {
     printf("File %s sent successfully.\n", filename);
 }
 
-void receive_file(SOCKET sockfd, struct sockaddr_in server_addr, char *filename) {
+void receive_file(SOCKET sockfd, struct sockaddr_in server_addr, char *filename,char * msg) {
+    char buffer[BUFFER_SIZE];
+    int bytes_received;
+    int addr_len = sizeof(server_addr);
+
+    sendto(sockfd, msg, strlen(msg), 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
+
+    recvfrom(sockfd, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&server_addr, &addr_len);
+    if (strncmp(buffer, "FILE_NOT_FOUND",14) == 0) {
+        printf("File not found on server.\n");
+        return;
+    }
+
     FILE *file = fopen(filename, "wb");
     if (!file) {
         printf("Error creating file: %s\n", filename);
         return;
     }
 
-    char buffer[BUFFER_SIZE];
-    int bytes_received;
-    int addr_len = sizeof(server_addr);
 
     while (1) {
         bytes_received = recvfrom(sockfd, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&server_addr, &addr_len);
-        // buffer[bytes_received] = '\0';
+
 
         if (bytes_received < BUFFER_SIZE) {
             break;

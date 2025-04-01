@@ -68,9 +68,9 @@ int main() {
             char command[5], filename[BUFFER_SIZE];
             sscanf(buffer, "%s %s", command, filename);
 
-            if (strcmp(command, "GET") == 0) {
+            if (strcmp(command, "GET") == 0 && strlen(filename) > 0) {
                 handle_get(sockfd, client_addr, addr_len, filename);
-            } else if (strcmp(command, "PUT") == 0) {
+            } else if (strcmp(command, "PUT") == 0 && strlen(filename) > 0) {
                 handle_put(sockfd, client_addr, addr_len, filename);
             }
         }
@@ -89,12 +89,12 @@ void handle_get(SOCKET sockfd, struct sockaddr_in client_addr, int addr_len, cha
         return;
     }
 
-    // struct stat file_stat;
-    // stat(filename, &file_stat);
-    // char file_size_str[20];
-    // sprintf(file_size_str, "%ld", file_stat.st_size);
+    struct stat file_stat;
+    stat(filename, &file_stat);
+    char file_size_str[20];
+    sprintf(file_size_str, "%ld", file_stat.st_size);
 
-    // sendto(sockfd, file_size_str, strlen(file_size_str), 0, (struct sockaddr *)&client_addr, addr_len);
+    sendto(sockfd, file_size_str, strlen(file_size_str), 0, (struct sockaddr *)&client_addr, addr_len);
 
     char buffer[BUFFER_SIZE];
 
