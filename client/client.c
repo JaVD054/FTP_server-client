@@ -117,27 +117,31 @@ void receive_file(SOCKET sockfd, struct sockaddr_in server_addr, char *filename,
     sendto(sockfd, msg, strlen(msg), 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
 
     recvfrom(sockfd, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&server_addr, &addr_len);
+
     if (strncmp(buffer, "FILE_NOT_FOUND",14) == 0) {
         printf("File not found on server.\n");
         return;
     }
-
+    
     FILE *file = fopen(filename, "wb");
     if (!file) {
         printf("Error creating file: %s\n", filename);
         return;
     }
-
-
+    
+    
     while (1) {
         bytes_received = recvfrom(sockfd, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&server_addr, &addr_len);
-
-
+        
+        printf("Server response: %s\n", buffer);
+        
+        fwrite(buffer, 1, bytes_received, file);
+        
         if (bytes_received < BUFFER_SIZE) {
             break;
+            printf("End of file received.\n");
         }
 
-        fwrite(buffer, 1, bytes_received, file);
     }
 
     fclose(file);
