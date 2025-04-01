@@ -130,18 +130,12 @@ void receive_file(SOCKET sockfd, struct sockaddr_in server_addr, char *filename,
     }
     
     
-    while (1) {
-        bytes_received = recvfrom(sockfd, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&server_addr, &addr_len);
-        
-        printf("Server response: %s\n", buffer);
-        
+    
+    while ((bytes_received = recvfrom(sockfd, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&server_addr, &addr_len)) > 0) {
         fwrite(buffer, 1, bytes_received, file);
-        
         if (bytes_received < BUFFER_SIZE) {
             break;
-            printf("End of file received.\n");
         }
-
     }
 
     fclose(file);
