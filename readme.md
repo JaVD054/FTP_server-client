@@ -1,14 +1,33 @@
 # UDP File Transfer System Documentation
 
 ## Introduction
-This document provides an in-depth explanation of the UDP-based file transfer system, comprising a client and a server application. The system uses UDP sockets for communication and supports file upload (PUT), file download (GET), and client authentication. Both applications are implemented using C and the Winsock library on Windows.
+This document provides an explanation of the UDP-based file transfer system, comprising a client and a server application. The system uses UDP sockets for communication and supports file upload (PUT), file download (GET), and client authentication.
 
 ## Prerequisites
 - Windows operating system
 - Winsock library (ws2_32.lib)
-- Basic knowledge of socket programming in C
 
 ---
+
+## Usage Instructions
+1. Compile the source code with gcc with the flag `lwsock32`
+```bash
+gcc server.c -lwsock32 -o server
+gcc client.c -lwsock32 -o client
+```
+2. Run the server application.
+   ```bash
+   ./server.exe
+   ```
+3. Run the client application and provide credentials.
+   ```bash
+   ./client.exe
+   ```
+3. Use GET or PUT commands to transfer files.
+   ```bash
+   GET filename.txt
+   PUT newfile.txt
+   ```
 
 ## Server Code Explanation
 The server code initializes a UDP socket and listens for incoming connections. It authenticates users and processes GET and PUT commands.
@@ -74,25 +93,6 @@ The client program interacts with the server for file transfer and authenticatio
 
 ---
 
-## Usage Instructions
-1. Compile the source code with gcc with the flag `lwsock32`
-```bash
-gcc server.c -lwsock32 -o server
-gcc client.c -lwsock32 -o client
-```
-2. Run the server application.
-   ```bash
-   ./server.exe
-   ```
-3. Run the client application and provide credentials.
-   ```bash
-   ./client.exe
-   ```
-3. Use GET or PUT commands to transfer files.
-   ```bash
-   GET filename.txt
-   PUT newfile.txt
-   ```
 
 ## Conclusion
 This file transfer system demonstrates the use of UDP for transmitting files between a client and a server. The authentication feature ensures secure file access.
