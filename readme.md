@@ -54,10 +54,10 @@ The server code initializes a UDP socket and listens for incoming connections. I
 4. **Authentication:**
    The server authenticates clients by comparing received credentials with hard-coded ones.
 
-5. **File Handling - GET and PUT:**
-   - GET: Sends the requested file to the client.
-   - PUT: Receives a file from the client and stores it locally.
-
+5. File Handling - GET and PUT with Edge Case Handling:
+   - GET: Sends the requested file to the client, handling cases where the file does not exist by sending a 'FILE_NOT_FOUND' response.
+   - PUT: Receives a file from the client and stores it locally, handling cases where file creation fails.
+   
 ---
 
 ## Client Code Explanation
